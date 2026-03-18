@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Warenkorb - WebShop</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 style="margin:0; font-size:1.2rem;">Warenkorb</h1>
+      <nav id="main-nav"></nav>
+    </div>
+  </header>
+  <main>
+    <div id="content"></div>
+  </main>
+  <footer>
+    <p>© 2026 WebShop (Lernprojekt)</p>
+  </footer>
+  <script type="module">
+    import { apiFetch, getCart, setCart, removeFromCart, updateCartItem, renderNav, formatPrice } from '/js/app.js';
+
+    renderNav('cart.html');
+
+    const content = document.getElementById('content');
+
+    async function renderCart() {
+      const cart = getCart();
+      if (!cart.length) {
+        content.innerHTML = `
+          <div class="card">
+            <h2>Dein Warenkorb ist leer</h2>
+            <p>Füge aus der <a href="/search.html">Artikelsuche</a> Artikel hinzu.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const rows = await Promise.all(
+        cart.map(async (item) => {
+          try {
+            const product = await apiFetch(`/articles/${item.productId}`);
+            return { ...product, quantity: item.quantity };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const valid = rows.filter(Boolean);
+      if (!valid.length) {
+        setCart([]);
+        renderCart();
+        return;
+      }
+
+      const total = valid.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      content.innerHTML = `
+        <div class="card">
+          <h2>Warenkorb</h2>
+          <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr style="text-align:left; border-bottom:1px solid #e5e7eb;">
+                  <th>Artikel</th>
+                  <th>Preis</th>
+                  <th style="width:120px;">Menge</th>
+                  <th>Summe</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${valid
+                  .map((item) => {
+                    return `
+                    <tr data-id="${item.id}">
+                      <td>
+                        <strong>${item.title}</strong><br />
+                        <small>${item.description}</small>
+                      </td>
+                      <td>${formatPrice(item.price)}</td>
+                      <td>
+                        <input type="number" min="1" value="${item.quantity}" class="qty-input" style="width:70px;" />
+                      </td>
+                      <td>${formatPrice(item.price * item.quantity)}</td>
+                      <td>
+                        <button class="button secondary removeBtn">Entfernen</button>
+                      </td>
+                    </tr>
+                  `;
+                  })
+                  .join('')}
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex; justify-content: space-between; align-items:center; margin-top:1rem; flex-wrap:wrap; gap:0.75rem;">
+            <div>
+              <strong>Gesamt:</strong> ${formatPrice(total)}
+            </div>
+            <div>
+              <a class="button" href="/checkout.html">Zur Kasse</a>
+              <button class="button secondary" id="clearBtn">Warenkorb leeren</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.querySelectorAll('.removeBtn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('tr');
+          const id = row?.dataset?.id;
+          if (!id) return;
+          removeFromCart(id);
+          renderCart();
+        });
+      });
+
+      document.querySelectorAll('.qty-input').forEach((input) => {
+        input.addEventListener('change', () => {
+          const row = input.closest('tr');
+          const id = row?.dataset?.id;
+          const qty = parseInt(input.value, 10) || 1;
+          updateCartItem(id, qty);
+          renderCart();
+        });
+      });
+
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        setCart([]);
+        renderCart();
+      });
+    }
+
+    renderCart();
+  </script>
+</body>
+</html>

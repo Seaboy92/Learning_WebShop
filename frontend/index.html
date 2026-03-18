@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WebShop - Startseite</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 style="margin:0; font-size:1.2rem;">Mein kleiner WebShop</h1>
+      <nav id="main-nav"></nav>
+    </div>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Willkommen!</h2>
+      <p>Dies ist dein Lern-Projekt für einen einfachen Webshop. Du findest hier:</p>
+      <ul>
+        <li>Artikel suchen &amp; in den Warenkorb legen</li>
+        <li>Warenkorb verwalten</li>
+        <li>Bestellung abschicken</li>
+      </ul>
+      <p>
+        Starte am besten mit <a href="/search.html">Artikelsuche</a>.
+      </p>
+    </div>
+  </main>
+  <footer>
+    <p>© 2026 WebShop (Lernprojekt)</p>
+  </footer>
+  <script type="module">
+    import { renderNav } from '/js/app.js';
+    renderNav('index.html');
+  </script>
+</body>
+</html>

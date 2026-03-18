@@ -1,0 +1,23 @@
+[
+  {
+    "id": "prod-1",
+    "title": "Kaffee Tasse (weiß)",
+    "description": "Schöne Keramik-Tasse mit 300ml Volumen.",
+    "price": 9.95,
+    "image": "/images/tasse.svg"
+  },
+  {
+    "id": "prod-2",
+    "title": "Notizbuch (A5)",
+    "description": "Notizbuch mit 80 Seiten, kariert.",
+    "price": 7.5,
+    "image": "/images/notizbuch.svg"
+  },
+  {
+    "id": "prod-3",
+    "title": "Stiftsatz (5 Farben)",
+    "description": "Farbstifte mit weicher Mine, ideal zum Zeichnen.",
+    "price": 4.9,
+    "image": "/images/stifte.svg"
+  }
+]

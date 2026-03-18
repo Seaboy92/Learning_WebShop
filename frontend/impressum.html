@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Impressum - WebShop</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 style="margin:0; font-size:1.2rem;">Impressum</h1>
+      <nav id="main-nav"></nav>
+    </div>
+  </header>
+  <main>
+    <div class="card">
+      <h2>Angaben gemäß § 5 TMG</h2>
+      <p>Max Mustermann<br />Musterstraße 1<br />12345 Musterstadt</p>
+
+      <h3>Kontakt</h3>
+      <p>
+        Telefon: +49 123 456789<br />
+        E-Mail: <a href="mailto:info@example.com">info@example.com</a>
+      </p>
+
+      <h3>Haftung für Inhalte</h3>
+      <p>
+        Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.
+      </p>
+    </div>
+  </main>
+  <footer>
+    <p>© 2026 WebShop (Lernprojekt)</p>
+  </footer>
+  <script type="module">
+    import { renderNav } from '/js/app.js';
+    renderNav('impressum.html');
+  </script>
+</body>
+</html>

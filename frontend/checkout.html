@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bezahlvorgang - WebShop</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 style="margin:0; font-size:1.2rem;">Bezahlvorgang</h1>
+      <nav id="main-nav"></nav>
+    </div>
+  </header>
+  <main>
+    <div id="content"></div>
+  </main>
+  <footer>
+    <p>© 2026 WebShop (Lernprojekt)</p>
+  </footer>
+  <script type="module">
+    import { apiFetch, getCart, clearCart, formatPrice, renderNav } from '/js/app.js';
+
+    renderNav('checkout.html');
+
+    const content = document.getElementById('content');
+
+    async function renderCheckout() {
+      const cart = getCart();
+      if (!cart.length) {
+        content.innerHTML = `
+          <div class="card">
+            <h2>Warenkorb leer</h2>
+            <p>Füge zuerst Artikel in den <a href="/cart.html">Warenkorb</a> hinzu.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const items = await Promise.all(
+        cart.map(async (item) => {
+          try {
+            const product = await apiFetch(`/articles/${item.productId}`);
+            return { ...product, quantity: item.quantity };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const valid = items.filter(Boolean);
+      const total = valid.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      content.innerHTML = `
+        <div class="card">
+          <h2>Bestellübersicht</h2>
+          <div style="margin-bottom:1rem;">
+            ${valid
+              .map(
+                (item) => `
+                <div style="display:flex; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid #e5e7eb;">
+                  <div>
+                    <strong>${item.title}</strong><br />
+                    <small>${item.quantity} × ${formatPrice(item.price)}</small>
+                  </div>
+                  <div>${formatPrice(item.price * item.quantity)}</div>
+                </div>
+              `
+              )
+              .join('')}
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <div>
+              <strong>Gesamt:</strong> ${formatPrice(total)}
+            </div>
+            <button class="button" id="confirmBtn">Bestellung abschicken</button>
+          </div>
+          <div id="message" style="margin-top:1rem;"></div>
+        </div>
+      `;
+
+      const message = document.getElementById('message');
+      const confirmBtn = document.getElementById('confirmBtn');
+
+      confirmBtn.addEventListener('click', async () => {
+        confirmBtn.disabled = true;
+        message.innerHTML = '';
+        try {
+          await apiFetch('/orders', {
+            method: 'POST',
+            body: JSON.stringify({ items: valid, total }),
+          });
+          clearCart();
+          message.innerHTML = '<div class="alert success">Bestellung wurde aufgenommen! Du kannst den Shop weiter nutzen.</div>';
+        } catch (err) {
+          message.innerHTML = `<div class="alert error">${err.message}</div>`;
+        } finally {
+          confirmBtn.disabled = false;
+        }
+      });
+    }
+
+    renderCheckout();
+  </script>
+</body>
+</html>

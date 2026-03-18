@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Artikelsuche - WebShop</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 style="margin:0; font-size:1.2rem;">Artikelsuche</h1>
+      <nav id="main-nav"></nav>
+    </div>
+  </header>
+  <main>
+    <div class="card" style="max-width:800px; margin:auto;">
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+        <input id="searchInput" type="search" placeholder="Suchen..." style="flex:1;" />
+        <button id="searchBtn" class="button">Suchen</button>
+      </div>
+    </div>
+    <div id="results" class="grid"></div>
+  </main>
+  <footer>
+    <p>© 2026 WebShop (Lernprojekt)</p>
+  </footer>
+  <script type="module">
+    import { apiFetch, addToCart, renderNav, formatPrice } from '/js/app.js';
+
+    renderNav('search.html');
+
+    const results = document.getElementById('results');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+
+    async function loadArticles(query) {
+      results.innerHTML = '<p>lade…</p>';
+      try {
+        const qs = query ? `?search=${encodeURIComponent(query)}` : '';
+        const items = await apiFetch(`/articles${qs}`);
+        if (!items.length) {
+          results.innerHTML = '<p>Keine Artikel gefunden.</p>';
+          return;
+        }
+        results.innerHTML = items
+          .map(
+            (item) => `
+            <div class="card">
+              <img src="${item.image}" alt="${item.title}" style="width:100%; height:200px; object-fit:cover; border-radius:0.5rem;" />
+              <h3 style="margin:0.75rem 0 0.35rem;">${item.title}</h3>
+              <p style="margin:0.25rem 0 0.75rem; color: rgba(0,0,0,0.7);">${item.description}</p>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+                <strong>${formatPrice(item.price)}</strong>
+                <button class="button" data-id="${item.id}">In den Warenkorb</button>
+              </div>
+            </div>
+          `
+          )
+          .join('');
+
+        document.querySelectorAll('button[data-id]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            addToCart(btn.dataset.id);
+            btn.textContent = 'Hinzugefügt';
+            btn.disabled = true;
+            setTimeout(() => {
+              btn.textContent = 'In den Warenkorb';
+              btn.disabled = false;
+            }, 900);
+          });
+        });
+      } catch (err) {
+        results.innerHTML = `<div class="alert error">Fehler: ${err.message}</div>`;
+      }
+    }
+
+    searchBtn.addEventListener('click', () => {
+      loadArticles(searchInput.value.trim());
+    });
+
+    searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadArticles(searchInput.value.trim());
+      }
+    });
+
+    loadArticles('');
+  </script>
+</body>
+</html>
