@@ -1,0 +1,10 @@
+{
+  "name": "webshop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test": "bun test backend/test frontend/test --max-concurrency=1"
+  }
+}
