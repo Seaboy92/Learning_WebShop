@@ -61,8 +61,6 @@ jobs:
             username: ${{ secrets.SSH_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
-                set -e
-
                 echo "== DOCKER VERSION =="
                 docker --version
 
