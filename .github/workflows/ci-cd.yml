@@ -61,6 +61,22 @@ jobs:
             username: ${{ secrets.SSH_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
-                docker rm -f webshop-app
+                set -e
+
+                echo "== DOCKER VERSION =="
+                docker --version
+
+                echo "== PULL IMAGE =="
                 docker pull ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
+
+                echo "== IMAGES ON SERVER =="
+                docker images
+
+                echo "== CLEANUP =="
+                docker rm -f webshop-app || true
+
+                echo "== RUN CONTAINER =="
                 docker run -d --name webshop-app -p 80:3000 ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
+
+                echo "== RUNNING CONTAINERS =="
+                docker ps
