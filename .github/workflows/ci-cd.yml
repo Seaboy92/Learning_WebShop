@@ -61,4 +61,4 @@ jobs:
             username: ${{ secrets.SSH_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script:
-                C:\Users\Admin\.docker\pull_and_start.ps1
+                powershell -ExecutionPolicy Bypass -File C:\Users\Admin\.docker\pull_and_start.ps1
