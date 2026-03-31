@@ -61,7 +61,6 @@ jobs:
             username: ${{ secrets.SSH_USER }}
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             script: |
-                cd /path/to/your/app
                 docker stop webshop-app || true
                 docker rm webshop-app || true
                 docker pull ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
