@@ -56,12 +56,27 @@ jobs:
 
       - name: Deploy auf Server
         run: |
-            ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            echo $DOCKER_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin &&
-            docker pull $DOCKER_USERNAME/learning_webshop-app:staging &&
-            docker stop app || true &&
-            docker rm app || true &&
+            ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            set -x
+
+            echo 'LOGIN...'
+            echo $DOCKER_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin
+
+            echo 'PULL IMAGE...'
+            docker pull $DOCKER_USERNAME/learning_webshop-app:staging
+
+            echo 'STOP OLD CONTAINER...'
+            docker stop app || true
+            docker rm app || true
+
+            echo 'START NEW CONTAINER...'
             docker run -d --name app -p 3000:3000 $DOCKER_USERNAME/learning_webshop-app:staging
+
+            echo 'CONTAINERS NOW:'
+            docker ps -a
+
+            echo 'LOGS:'
+            docker logs app || true
             "
         env:
             DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
