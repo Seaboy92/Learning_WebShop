@@ -68,4 +68,4 @@ jobs:
           )
 
           ENCODED_PS=$(printf '%s' "$REMOTE_PS" | iconv -t UTF-16LE | base64 -w 0)
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $ENCODED_PS"
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $ENCODED_PS"
