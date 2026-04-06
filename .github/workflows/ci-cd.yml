@@ -59,6 +59,13 @@ jobs:
           $dockerToken = '${{ secrets.DOCKER_TOKEN }}'
           $image = "$dockerUser/learning_webshop-app:staging"
           $container = 'webshop-app'
+          $dockerConfig = Join-Path $env:TEMP 'docker-gha-auth'
+
+          if (Test-Path $dockerConfig) {
+            Remove-Item -Recurse -Force $dockerConfig
+          }
+          New-Item -ItemType Directory -Path $dockerConfig | Out-Null
+          $env:DOCKER_CONFIG = $dockerConfig
 
           $dockerToken | docker login -u $dockerUser --password-stdin
           if ($LASTEXITCODE -ne 0) { throw 'docker login fehlgeschlagen' }
@@ -77,6 +84,8 @@ jobs:
 
           docker ps -a
           docker logs $container
+
+          Remove-Item -Recurse -Force $dockerConfig
           EOF
           )
 
