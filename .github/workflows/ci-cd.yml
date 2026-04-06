@@ -60,6 +60,9 @@ jobs:
           $image = "$dockerUser/learning_webshop-app:staging"
           $container = 'webshop-app'
           $dockerConfig = Join-Path $env:TEMP 'docker-gha-auth'
+          $configFile = Join-Path $dockerConfig 'config.json'
+          $authBytes = [System.Text.Encoding]::UTF8.GetBytes("${dockerUser}:${dockerToken}")
+          $authValue = [System.Convert]::ToBase64String($authBytes)
 
           if (Test-Path $dockerConfig) {
             Remove-Item -Recurse -Force $dockerConfig
@@ -67,8 +70,7 @@ jobs:
           New-Item -ItemType Directory -Path $dockerConfig | Out-Null
           $env:DOCKER_CONFIG = $dockerConfig
 
-          $dockerToken | docker login -u $dockerUser --password-stdin
-          if ($LASTEXITCODE -ne 0) { throw 'docker login fehlgeschlagen' }
+          Set-Content -Path $configFile -Value "{`"auths`":{`"https://index.docker.io/v1/`":{`"auth`":`"$authValue`"}}}" -Encoding ascii
 
           docker pull $image
           if ($LASTEXITCODE -ne 0) { throw 'docker pull fehlgeschlagen' }
