@@ -44,23 +44,37 @@ jobs:
     needs: ci
 
     steps:
+      - name: SSH vorbereiten
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy auf Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          command_timeout: 15m
-          script_stop: true
-          script: |
-            whoami
-            hostname
-            echo --- WHERE DOCKER ---
-            where docker
-            echo --- DOCKER VERSION ---
-            docker version
-            echo --- DOCKER INFO ---
-            docker info
-            echo --- DOCKER PS ---
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "& {
+            \$ErrorActionPreference = 'Stop'
+            \$dockerUser = '${{ secrets.DOCKER_USERNAME }}'
+            \$dockerToken = '${{ secrets.DOCKER_TOKEN }}'
+            \$image = \"\$dockerUser/learning_webshop-app:staging\"
+            \$container = 'webshop-app'
+
+            \$dockerToken | docker login -u \$dockerUser --password-stdin
+            if (\$LASTEXITCODE -ne 0) { throw 'docker login fehlgeschlagen' }
+
+            docker pull \$image
+            if (\$LASTEXITCODE -ne 0) { throw 'docker pull fehlgeschlagen' }
+
+            \$exists = docker ps -a --format '{{.Names}}' | Select-String -Pattern \"^\$container\$\" -Quiet
+            if (\$exists) {
+              docker rm -f \$container
+              if (\$LASTEXITCODE -ne 0) { throw 'docker rm fehlgeschlagen' }
+            }
+
+            docker run -d --restart unless-stopped --name \$container -p 3000:3000 \$image
+            if (\$LASTEXITCODE -ne 0) { throw 'docker run fehlgeschlagen' }
+
             docker ps -a
+            docker logs \$container
+          }"
