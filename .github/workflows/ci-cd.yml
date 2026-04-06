@@ -53,28 +53,32 @@ jobs:
 
       - name: Deploy auf Server
         run: |
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "& {
-            \$ErrorActionPreference = 'Stop'
-            \$dockerUser = '${{ secrets.DOCKER_USERNAME }}'
-            \$dockerToken = '${{ secrets.DOCKER_TOKEN }}'
-            \$image = \"\$dockerUser/learning_webshop-app:staging\"
-            \$container = 'webshop-app'
+          REMOTE_PS=$(cat <<'EOF'
+          $ErrorActionPreference = 'Stop'
+          $dockerUser = '${{ secrets.DOCKER_USERNAME }}'
+          $dockerToken = '${{ secrets.DOCKER_TOKEN }}'
+          $image = "$dockerUser/learning_webshop-app:staging"
+          $container = 'webshop-app'
 
-            \$dockerToken | docker login -u \$dockerUser --password-stdin
-            if (\$LASTEXITCODE -ne 0) { throw 'docker login fehlgeschlagen' }
+          $dockerToken | docker login -u $dockerUser --password-stdin
+          if ($LASTEXITCODE -ne 0) { throw 'docker login fehlgeschlagen' }
 
-            docker pull \$image
-            if (\$LASTEXITCODE -ne 0) { throw 'docker pull fehlgeschlagen' }
+          docker pull $image
+          if ($LASTEXITCODE -ne 0) { throw 'docker pull fehlgeschlagen' }
 
-            \$exists = docker ps -a --format '{{.Names}}' | Select-String -Pattern \"^\$container\$\" -Quiet
-            if (\$exists) {
-              docker rm -f \$container
-              if (\$LASTEXITCODE -ne 0) { throw 'docker rm fehlgeschlagen' }
-            }
+          $exists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$container$" -Quiet
+          if ($exists) {
+            docker rm -f $container
+            if ($LASTEXITCODE -ne 0) { throw 'docker rm fehlgeschlagen' }
+          }
 
-            docker run -d --restart unless-stopped --name \$container -p 3000:3000 \$image
-            if (\$LASTEXITCODE -ne 0) { throw 'docker run fehlgeschlagen' }
+          docker run -d --restart unless-stopped --name $container -p 3000:3000 $image
+          if ($LASTEXITCODE -ne 0) { throw 'docker run fehlgeschlagen' }
 
-            docker ps -a
-            docker logs \$container
-          }"
+          docker ps -a
+          docker logs $container
+          EOF
+          )
+
+          ENCODED_PS=$(printf '%s' "$REMOTE_PS" | iconv -t UTF-16LE | base64 -w 0)
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $ENCODED_PS"
