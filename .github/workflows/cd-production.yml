@@ -1,0 +1,71 @@
+name: CD Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    name: Promote and Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Promote staging image to latest
+        run: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
+          docker tag ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:latest
+
+      - name: SSH vorbereiten
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.PROD_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy auf Production Server
+        run: |
+          REMOTE_PS=$(cat <<'EOF'
+          $ErrorActionPreference = 'Stop'
+          $dockerUser = '${{ secrets.DOCKER_USERNAME }}'
+          $dockerToken = '${{ secrets.DOCKER_TOKEN }}'
+          $image = "$dockerUser/learning_webshop-app:latest"
+          $container = 'webshop-app-prod'
+          $dockerConfig = Join-Path $env:TEMP 'docker-gha-auth'
+          $configFile = Join-Path $dockerConfig 'config.json'
+          $authBytes = [System.Text.Encoding]::UTF8.GetBytes("${dockerUser}:${dockerToken}")
+          $authValue = [System.Convert]::ToBase64String($authBytes)
+
+          if (Test-Path $dockerConfig) {
+            Remove-Item -Recurse -Force $dockerConfig
+          }
+          New-Item -ItemType Directory -Path $dockerConfig | Out-Null
+          $env:DOCKER_CONFIG = $dockerConfig
+
+          Set-Content -Path $configFile -Value "{`"auths`":{`"https://index.docker.io/v1/`":{`"auth`":`"$authValue`"}}}" -Encoding ascii
+
+          docker pull $image
+          if ($LASTEXITCODE -ne 0) { throw 'docker pull fehlgeschlagen' }
+
+          $exists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$container$" -Quiet
+          if ($exists) {
+            docker rm -f $container
+            if ($LASTEXITCODE -ne 0) { throw 'docker rm fehlgeschlagen' }
+          }
+
+          docker run -d --restart unless-stopped --name $container -p 3001:3001 $image
+          if ($LASTEXITCODE -ne 0) { throw 'docker run fehlgeschlagen' }
+
+          docker ps -a
+          docker logs $container
+
+          Remove-Item -Recurse -Force $dockerConfig
+          EOF
+          )
+
+          ENCODED_PS=$(printf '%s' "$REMOTE_PS" | iconv -t UTF-16LE | base64 -w 0)
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.PROD_SSH_USER }}@${{ secrets.PROD_SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $ENCODED_PS"

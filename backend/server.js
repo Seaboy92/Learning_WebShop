@@ -1,5 +1,5 @@
-// Minimaler Webshop-Server ohne externe Abhängigkeiten
-// Ziel: kein npm install nötig, alles läuft mit Node.js Core.
+// Minimaler Webshop-Server ohne externe Abhaengigkeiten
+// Ziel: kein npm install noetig, alles laeuft mit Node.js Core.
 
 const http = require('http');
 const fs = require('fs').promises;
@@ -52,12 +52,9 @@ async function ensureDataFiles() {
   try {
     await fs.access(ARTICLES_FILE);
   } catch {
-    // Wenn die Datei noch nicht existiert, legen wir eine leere Artikel-Liste an.
-    // So startet der Server ohne Fehler, aber es gibt kein vorgefülltes Sortiment.
     await fs.writeFile(ARTICLES_FILE, '[]', 'utf8');
   }
 }
-
 
 async function readJson(filePath, fallback) {
   try {
@@ -105,9 +102,10 @@ async function handleApi(req, res) {
     const search = (parsedUrl.query.search || '').toString().toLowerCase();
     const articles = await readJson(ARTICLES_FILE, []);
     const filtered = search
-      ? articles.filter((a) =>
-          a.title.toLowerCase().includes(search) ||
-          a.description.toLowerCase().includes(search)
+      ? articles.filter(
+          (article) =>
+            article.title.toLowerCase().includes(search) ||
+            article.description.toLowerCase().includes(search)
         )
       : articles;
     return sendJson(res, 200, filtered);
@@ -116,18 +114,25 @@ async function handleApi(req, res) {
   if (parsedUrl.pathname.startsWith('/api/articles/') && method === 'GET') {
     const id = parsedUrl.pathname.replace('/api/articles/', '');
     const articles = await readJson(ARTICLES_FILE, []);
-    const item = articles.find((a) => a.id === id);
-    if (!item) return sendJson(res, 404, { message: 'Artikel nicht gefunden' });
+    const item = articles.find((article) => article.id === id);
+    if (!item) {
+      return sendJson(res, 404, { message: 'Artikel nicht gefunden' });
+    }
     return sendJson(res, 200, item);
   }
 
   if (parsedUrl.pathname === '/api/orders' && method === 'POST') {
     const body = await parseBody(req);
     console.log('Neue Bestellung:', { order: body });
-    return sendJson(res, 200, { message: 'Bestellung aufgenommen', orderId: crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex') });
+    return sendJson(res, 200, {
+      message: 'Bestellung aufgenommen',
+      orderId: crypto.randomUUID
+        ? crypto.randomUUID()
+        : crypto.randomBytes(16).toString('hex'),
+    });
   }
 
-  sendJson(res, 404, { message: 'API nicht gefunden' });
+  return sendJson(res, 404, { message: 'API nicht gefunden' });
 }
 
 async function handleRequest(req, res) {
@@ -137,9 +142,11 @@ async function handleRequest(req, res) {
     return handleApi(req, res);
   }
 
-  let filePath = path.join(FRONTEND_DIR, parsedUrl === '/' ? 'index.html' : parsedUrl);
+  let filePath = path.join(
+    FRONTEND_DIR,
+    parsedUrl === '/' ? 'index.html' : parsedUrl
+  );
 
-  // Fallback to index.html for SPA routes
   try {
     await fs.access(filePath);
   } catch {
@@ -149,16 +156,53 @@ async function handleRequest(req, res) {
   return sendStatic(res, filePath);
 }
 
-ensureDataFiles()
-  .then(() => {
-    const server = http.createServer(handleRequest);
+function createServer() {
+  return http.createServer(handleRequest);
+}
 
-    server.listen(PORT, () => {
-      console.log(`Webshop läuft auf http://localhost:${PORT}`);
-      console.log('Backend läuft ohne externe Abhängigkeiten (nur Node Core).');
+async function startServer(port = PORT) {
+  await ensureDataFiles();
+
+  const server = createServer();
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, () => {
+      server.removeListener('error', reject);
+      resolve();
     });
-  })
-  .catch((err) => {
-    console.error('Fehler beim Starten:', err);
-    process.exit(1);
   });
+
+  return server;
+}
+
+module.exports = {
+  ARTICLES_FILE,
+  FRONTEND_DIR,
+  createServer,
+  ensureDataFiles,
+  handleApi,
+  handleRequest,
+  parseBody,
+  readJson,
+  sendJson,
+  sendStatic,
+  startServer,
+  writeJson,
+};
+
+if (require.main === module) {
+  startServer()
+    .then((server) => {
+      const address = server.address();
+      const actualPort =
+        address && typeof address === 'object' ? address.port : PORT;
+      console.log(`Webshop laeuft auf http://localhost:${actualPort}`);
+      console.log(
+        'Backend laeuft ohne externe Abhaengigkeiten (nur Node Core).'
+      );
+    })
+    .catch((err) => {
+      console.error('Fehler beim Starten:', err);
+      process.exit(1);
+    });
+}
