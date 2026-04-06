@@ -43,22 +43,21 @@ jobs:
     needs: ci 
 
     steps:
-
-      - name: SSH Key einrichten
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-      - name: Known Hosts hinzufügen
-        run: |
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
       - name: Deploy auf Server
-        uses: appleboy/ssh-action@master
-        with: 
-            host: ${{ secrets.SSH_HOST }}
-            username: ${{ secrets.SSH_USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            script:
-                powershell -ExecutionPolicy Bypass -File C:\Users\Admin\.docker\pull_and_start.ps1
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCKER_USERNAME,DOCKER_TOKEN
+          script: |
+            powershell -Command "
+              echo \$env:DOCKER_TOKEN | docker login -u \$env:DOCKER_USERNAME --password-stdin
+              docker pull \$env:DOCKER_USERNAME/learning_webshop-app:staging
+              docker stop webshop-app 2>\$null
+              docker rm webshop-app 2>\$null
+              docker run -d --name webshop-app -p 3000:3000 \$env:DOCKER_USERNAME/learning_webshop-app:staging
+            "
