@@ -54,30 +54,13 @@ jobs:
           command_timeout: 15m
           script_stop: true
           script: |
-            powershell -Command "
-              \$ErrorActionPreference = 'Stop'
-
-              \$dockerUser = '${{ secrets.DOCKER_USERNAME }}'
-              \$dockerToken = '${{ secrets.DOCKER_TOKEN }}'
-              \$image = \"\$dockerUser/learning_webshop-app:staging\"
-              \$container = 'webshop-app'
-
-              function Invoke-Docker([string] \$commandDescription, [scriptblock] \$command) {
-                Write-Host \"==> \$commandDescription\"
-                & \$command
-                if (\$LASTEXITCODE -ne 0) {
-                  throw \"Docker command failed: \$commandDescription (ExitCode=\$LASTEXITCODE)\"
-                }
-              }
-
-              Invoke-Docker 'Docker Login' { \$dockerToken | docker login -u \$dockerUser --password-stdin }
-              Invoke-Docker 'Docker Pull' { docker pull \$image }
-
-              if (docker ps -a --format '{{.Names}}' | Select-String -Pattern \"^\$container\$\" -Quiet) {
-                Invoke-Docker 'Remove Existing Container' { docker rm -f \$container }
-              }
-
-              Invoke-Docker 'Docker Run' { docker run -d --restart unless-stopped --name \$container -p 3000:3000 \$image }
-              Invoke-Docker 'List Containers' { docker ps -a }
-              Invoke-Docker 'Container Logs' { docker logs \$container }
-            "
+            whoami
+            hostname
+            echo --- WHERE DOCKER ---
+            where docker
+            echo --- DOCKER VERSION ---
+            docker version
+            echo --- DOCKER INFO ---
+            docker info
+            echo --- DOCKER PS ---
+            docker ps -a
