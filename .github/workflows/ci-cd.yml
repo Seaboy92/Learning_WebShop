@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run tests
+      - name: Run integration-/ unit-/ api-tests
         run: bun run test
 
       - name: Docker Build
