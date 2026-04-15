@@ -1,11 +1,10 @@
 param(
   [string]$DockerUser,
   [string]$DockerToken,
-  [string]$ImageName,
+  [string]$Image,
   [string]$Port,
   [string]$Container
 )
-$Image = "$DockerUser" + "/" + "$ImageName"
 $ErrorActionPreference = 'Stop'
 
 $dockerConfig = Join-Path $env:TEMP 'docker-gha-auth'
