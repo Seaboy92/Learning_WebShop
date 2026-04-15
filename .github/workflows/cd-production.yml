@@ -38,7 +38,7 @@ jobs:
           -DockerUser ${{ secrets.DOCKER_USERNAME }}
           -DockerToken ${{ secrets.DOCKER_TOKEN }}
           -Image ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:latest
-          -Port 3001:3001
+          -Port 3001:3000
           -Container webshop-app-prod"
 
       - name: Cleanup Deploy-Skript
