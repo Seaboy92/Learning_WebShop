@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run tests
+      - name: Run integration-/ unit-/ api-tests
         run: bun run test
 
       - name: Docker Build
@@ -37,7 +37,6 @@ jobs:
           docker tag webshop-app ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
           docker push ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
 
-
   cd:
     name: Deploy to Staging
     runs-on: ubuntu-latest
@@ -50,46 +49,21 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p ${{ secrets.SSH_PORT }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+        
+      - name: Deploy-Skript kopieren
+        run: scp -P ${{ secrets.SSH_PORT }} .github/workflows/scripts/deploy.ps1 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:C:/deploy/deploy.ps1
 
       - name: Deploy auf Server
-        run: |
-          REMOTE_PS=$(cat <<'EOF'
-          $ErrorActionPreference = 'Stop'
-          $dockerUser = '${{ secrets.DOCKER_USERNAME }}'
-          $dockerToken = '${{ secrets.DOCKER_TOKEN }}'
-          $image = "$dockerUser/learning_webshop-app:staging"
-          $container = 'webshop-app-test'
-          $dockerConfig = Join-Path $env:TEMP 'docker-gha-auth'
-          $configFile = Join-Path $dockerConfig 'config.json'
-          $authBytes = [System.Text.Encoding]::UTF8.GetBytes("${dockerUser}:${dockerToken}")
-          $authValue = [System.Convert]::ToBase64String($authBytes)
+        run: ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\deploy\deploy.ps1
+          -DockerUser ${{ secrets.DOCKER_USERNAME }}
+          -DockerToken ${{ secrets.DOCKER_TOKEN }}
+          -Image ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
+          -Port 3000:3000
+          -Container webshop-app-test"
 
-          if (Test-Path $dockerConfig) {
-            Remove-Item -Recurse -Force $dockerConfig
-          }
-          New-Item -ItemType Directory -Path $dockerConfig | Out-Null
-          $env:DOCKER_CONFIG = $dockerConfig
-
-          Set-Content -Path $configFile -Value "{`"auths`":{`"https://index.docker.io/v1/`":{`"auth`":`"$authValue`"}}}" -Encoding ascii
-
-          docker pull $image
-          if ($LASTEXITCODE -ne 0) { throw 'docker pull fehlgeschlagen' }
-
-          $exists = docker ps -a --format '{{.Names}}' | Select-String -Pattern "^$container$" -Quiet
-          if ($exists) {
-            docker rm -f $container
-            if ($LASTEXITCODE -ne 0) { throw 'docker rm fehlgeschlagen' }
-          }
-
-          docker run -d --restart unless-stopped --name $container -p 3000:3000 $image
-          if ($LASTEXITCODE -ne 0) { throw 'docker run fehlgeschlagen' }
-
-          docker ps -a
-          docker logs $container
-
-          Remove-Item -Recurse -Force $dockerConfig
-          EOF
-          )
-
-          ENCODED_PS=$(printf '%s' "$REMOTE_PS" | iconv -t UTF-16LE | base64 -w 0)
-          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $ENCODED_PS"
+      - name: Cleanup Deploy-Skript
+        if: always()
+        run: ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"if (Test-Path 'C:\deploy\deploy.ps1') { Remove-Item 'C:\deploy\deploy.ps1' -Force }\""
