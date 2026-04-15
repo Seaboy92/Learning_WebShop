@@ -58,11 +58,11 @@ jobs:
 
       - name: Deploy auf Server
         run: ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\deploy\deploy.ps1
-          -DockerUser '${{ secrets.DOCKER_USERNAME }}' 
-          -DockerToken '${{ secrets.DOCKER_TOKEN }}'
-          -Image '${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging'
-          -Port '3000:3000'
-          -Container 'webshop-app-test'"
+          -DockerUser ${{ secrets.DOCKER_USERNAME }}
+          -DockerToken ${{ secrets.DOCKER_TOKEN }}
+          -Image ${{ secrets.DOCKER_USERNAME }}/learning_webshop-app:staging
+          -Port 3000:3000
+          -Container webshop-app-test"
 
       - name: Cleanup Deploy-Skript
         if: always()
